@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Letters and Numbers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #f5f3ee; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; color: #1a1a1a; }
+  .loading-overlay { position:fixed; inset:0; background:#f5f3ee; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; z-index:100; }
+  .loading-spinner { width:32px; height:32px; border:3px solid #ddd; border-top-color:#1a1a1a; border-radius:50%; animation:spin 0.7s linear infinite; }
+  .loading-text { font-size:13px; color:#888; }
+  .loading-error { font-size:13px; color:#A32D2D; text-align:center; max-width:260px; line-height:1.5; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .card { background: #fff; border-radius: 16px; border: 0.5px solid #e0ddd8; padding: 2rem 2rem 2.5rem; width: 100%; max-width: 600px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  h1 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.75rem; }
+  .pick-row { display: flex; gap: 10px; align-items: center; margin-bottom: 1rem; }
+  .pick-label { font-size: 13px; color: #888; width: 100px; }
+  .pick-btn { padding: 0 18px; height: 38px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #1a1a1a; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
+  .pick-btn:hover { background: #f5f3ee; }
+  .pip-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .pip { width: 11px; height: 11px; border-radius: 50%; background: #ddd; transition: background 0.2s; }
+  .pip.v { background: #1D9E75; }
+  .pip.c { background: #378ADD; }
+  .count-label { font-size: 12px; color: #888; margin-bottom: 1rem; }
+  .preview-row { display: flex; gap: 8px; flex-wrap: wrap; min-height: 68px; align-items: center; margin-bottom: 1.25rem; }
+  .start-btn { background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 11px 26px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: opacity 0.15s; }
+  .start-btn:hover { opacity: 0.85; }
+  .start-btn:disabled { opacity: 0.3; cursor: default; }
+  #phase-game { display: none; }
+  .legend { display: flex; gap: 16px; margin-bottom: 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #888; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .tiles-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem; justify-content: center; }
+  .tile { width: 56px; height: 64px; border-radius: 10px; border: 1.5px solid #ddd; background: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 24px; color: #1a1a1a; cursor: pointer; transition: background 0.12s, opacity 0.15s, transform 0.1s; user-select: none; }
+  .tile.vowel { border-color: #1D9E75; background: #E1F5EE; }
+  .tile.consonant { border-color: #378ADD; background: #E6F1FB; }
+  .tile.used { opacity: 0.22; cursor: default; pointer-events: none; }
+  .tile:hover:not(.used) { filter: brightness(0.95); transform: translateY(-1px); }
+  .tile:active:not(.used) { transform: translateY(0); }
+  .shuffle-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
+  .shuffle-btn { padding: 6px 18px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #888; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.12s; }
+  .shuffle-btn:hover { background: #f5f3ee; }
+  .timer-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+  .timer-bar-bg { flex: 1; height: 6px; border-radius: 3px; background: #eee; overflow: hidden; }
+  .timer-bar { height: 100%; border-radius: 3px; background: #1D9E75; transition: width 0.9s linear, background 0.5s; }
+  .timer-num { font-size: 26px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; min-width: 40px; text-align: right; }
+  .word-display { display: flex; gap: 8px; flex-wrap: wrap; min-height: 68px; padding: 10px 12px; border: 1.5px solid #e0ddd8; border-radius: 10px; background: #f9f8f6; margin-bottom: 6px; align-items: center; transition: border-color 0.2s; }
+  .word-display.valid { border-color: #1D9E75; }
+  .word-display.invalid { border-color: #E24B4A; }
+  .word-tile { width: 46px; height: 52px; border-radius: 8px; background: #fff; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 22px; color: #1a1a1a; cursor: pointer; transition: background 0.1s; }
+  .word-tile:hover { background: #f5f3ee; }
+  .word-placeholder { font-size: 13px; color: #bbb; font-style: italic; }
+  .validation-row { min-height: 22px; margin-bottom: 6px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .val-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .val-valid .val-dot { background: #1D9E75; }
+  .val-valid .val-text { color: #0F6E56; }
+  .val-invalid .val-dot { background: #E24B4A; }
+  .val-invalid .val-text { color: #A32D2D; }
+  .keyboard-hint { font-size: 12px; color: #bbb; margin-bottom: 0.85rem; text-align: center; }
+  .action-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+  .act-btn { flex: 1; padding: 10px; border-radius: 8px; border: 0.5px solid #d0cdc8; background: #fff; color: #1a1a1a; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.12s, opacity 0.12s; }
+  .act-btn:hover { background: #f5f3ee; }
+  .act-btn.submit { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .act-btn.submit:hover { opacity: 0.85; }
+  .act-btn.submit:disabled { opacity: 0.3; cursor: default; }
+  .result-panel { display: none; padding: 1.25rem 1.5rem; border-radius: 10px; border: 0.5px solid #e0ddd8; background: #f9f8f6; }
+  .result-word { font-family: 'Playfair Display', serif; font-size: 30px; color: #1a1a1a; margin-bottom: 4px; }
+  .result-score { font-size: 14px; color: #666; margin-bottom: 14px; }
+  .full-monty { color: #1D9E75; font-weight: 500; }
+  .best-word-row { font-size: 13px; color: #666; padding-top: 12px; border-top: 0.5px solid #e0ddd8; margin-bottom: 14px; }
+  .best-word-val { font-family: 'Playfair Display', serif; font-size: 17px; color: #1a1a1a; }
+  .best-fm { color: #1D9E75; }
+  .dict-badge { display: inline-block; font-size: 11px; color: #aaa; margin-top: 1rem; }
+  #phase-menu { }
+  .menu-title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+  .menu-sub { font-size: 13px; color: #888; margin-bottom: 2rem; }
+  .menu-cards { display: flex; gap: 12px; }
+  .menu-card { flex: 1; border: 1.5px solid #e0ddd8; border-radius: 12px; padding: 1.25rem 1rem; cursor: pointer; background: #fff; text-align: left; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, box-shadow 0.15s; }
+  .menu-card:hover:not(.disabled) { border-color: #bbb; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .menu-card.disabled { opacity: 0.45; cursor: default; }
+  .menu-card-icon { font-size: 28px; margin-bottom: 10px; letter-spacing: 2px; font-family: 'Playfair Display', serif; color: #1a1a1a; }
+  .menu-card-title { font-size: 15px; font-weight: 500; color: #1a1a1a; margin-bottom: 4px; }
+  .menu-card-desc { font-size: 12px; color: #888; line-height: 1.5; }
+  .menu-card-badge { display: inline-block; font-size: 10px; font-weight: 500; color: #aaa; border: 0.5px solid #ddd; border-radius: 4px; padding: 2px 6px; margin-top: 8px; }
+  .menu-card.letters { border-color: #9FE1CB; }
+  .menu-card.letters:hover { border-color: #1D9E75; }
+  .menu-card.numbers { border-color: #B5D4F4; }
+  .menu-card.numbers:hover { border-color: #378ADD; }
+  .freeplay-row { display:flex; align-items:center; gap:10px; margin-top:1.5rem; padding-top:1.25rem; border-top:0.5px solid #e0ddd8; }
+  .freeplay-label { font-size:13px; color:#555; flex:1; }
+  .freeplay-label span { display:block; font-size:11px; color:#aaa; margin-top:2px; }
+  .toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; position:absolute; }
+  .toggle-track { position:absolute; inset:0; border-radius:11px; background:#ddd; transition:background 0.2s; cursor:pointer; }
+  .toggle input:checked + .toggle-track { background:#1a1a1a; }
+  .toggle-thumb { position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); pointer-events:none; }
+  .toggle input:checked ~ .toggle-thumb { transform:translateX(18px); }
+  .freeplay-badge { display:none; font-size:10px; font-weight:500; color:#fff; background:#1a1a1a; border-radius:4px; padding:2px 7px; margin-left:4px; vertical-align:middle; }
+  body.freeplay .freeplay-badge { display:inline; }
+  body.freeplay .timer-wrap { display:none !important; }
+  /* Numbers round */
+  #phase-numbers { display:none; }
+  .num-pick-row { display:flex; gap:10px; align-items:center; margin-bottom:1rem; }
+  .num-pick-label { font-size:13px; color:#888; width:120px; flex-shrink:0; }
+  .num-stepper { display:flex; align-items:center; gap:8px; }
+  .num-step-btn { width:32px; height:32px; border-radius:6px; border:0.5px solid #d0cdc8; background:#fff; color:#1a1a1a; font-size:18px; font-weight:500; font-family:'DM Sans',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.12s; }
+  .num-step-btn:hover:not(:disabled) { background:#f5f3ee; }
+  .num-step-btn:disabled { opacity:0.3; cursor:default; }
+  .num-step-val { font-size:20px; font-weight:500; font-family:'Playfair Display',serif; min-width:20px; text-align:center; }
+  .num-tiles-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; justify-content:center; }
+  .num-tile { width:64px; height:64px; border-radius:10px; border:1.5px solid #ddd; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'Playfair Display',serif; font-size:20px; color:#1a1a1a; cursor:pointer; transition:background 0.12s, opacity 0.15s, transform 0.1s; user-select:none; }
+  .num-tile.large { border-color:#378ADD; background:#E6F1FB; }
+  .num-tile.small { border-color:#1D9E75; background:#E1F5EE; }
+  .num-tile.used { opacity:0.22; cursor:default; pointer-events:none; }
+  .num-tile.selected { border-width:2px; filter:brightness(0.93); }
+  .num-tile:hover:not(.used) { filter:brightness(0.95); transform:translateY(-1px); }
+  .num-tile:active:not(.used) { transform:translateY(0); }
+  .target-display { text-align:center; margin-bottom:1rem; }
+  .target-label { font-size:12px; color:#888; margin-bottom:4px; }
+  .target-num { font-family:'Playfair Display',serif; font-size:52px; font-weight:700; color:#1a1a1a; line-height:1; }
+  .num-expr-area { background:#f9f8f6; border:1.5px solid #e0ddd8; border-radius:10px; padding:10px 14px; margin-bottom:6px; min-height:52px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; transition:border-color 0.2s; }
+  .num-expr-area.exact { border-color:#1D9E75; }
+  .num-expr-area.close { border-color:#EF9F27; }
+  .num-expr-token { background:#fff; border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-family:'Playfair Display',serif; font-size:18px; cursor:pointer; transition:background 0.1s; }
+  .num-expr-token:hover { background:#f5f3ee; }
+  .num-expr-token.op-token { font-family:'DM Sans',sans-serif; font-size:16px; font-weight:500; color:#555; }
+  .num-expr-placeholder { font-size:13px; color:#bbb; font-style:italic; }
+  .num-running-val { font-size:12px; color:#888; margin-bottom:0.5rem; min-height:18px; }
+  .num-running-val.exact { color:#0F6E56; font-weight:500; }
+  .num-running-val.error { color:#A32D2D; }
+  .num-op-row { display:flex; gap:8px; margin-bottom:1rem; justify-content:center; }
+  .op-btn { width:52px; height:44px; border-radius:8px; border:0.5px solid #d0cdc8; background:#fff; color:#1a1a1a; font-size:20px; font-weight:500; font-family:'DM Sans',sans-serif; cursor:pointer; transition:background 0.12s, border-color 0.12s; }
+  .op-btn:hover { background:#f5f3ee; }
+  .op-btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+  .num-result-score { font-size:14px; color:#666; margin-bottom:14px; }
+  .num-result-exact { color:#1D9E75; font-weight:500; }
+  .num-working-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; justify-content:center; min-height:0; }
+  .num-working-label { font-size:11px; color:#aaa; text-align:center; margin-bottom:4px; letter-spacing:0.04em; text-transform:uppercase; }
+  .num-tile.result { border-color:#9B6BD4; background:#F3EEFB; font-size:17px; }
+  .num-tile.result.used { opacity:0.22; cursor:default; pointer-events:none; }
+  .num-solution-row { font-size:13px; color:#666; padding-top:12px; border-top:0.5px solid #e0ddd8; margin-bottom:14px; line-height:1.7; }
+  .num-solution-val { font-family:'Playfair Display',serif; font-size:15px; color:#1a1a1a; }
+  @media (max-width: 480px) {
+    .card { padding: 1.25rem 1rem 2rem; }
+    .tile { width: 48px; height: 56px; font-size: 20px; }
+    .word-tile { width: 40px; height: 46px; font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+  <p class="loading-text">Loading word list…</p>
+</div>
+<div class="card" style="visibility:hidden" id="main-card">
+
+  <!-- Menu -->
+  <div id="phase-menu">
+    <p class="menu-title">Letters and Numbers</p>
+    <p class="menu-sub">Choose a round to play</p>
+    <div class="menu-cards">
+      <button class="menu-card letters" onclick="showLetters()">
+        <div class="menu-card-icon">A B C</div>
+        <div class="menu-card-title">Letters round</div>
+        <div class="menu-card-desc" id="letters-desc">Find the longest word from nine randomly chosen letters.</div>
+      </button>
+      <button class="menu-card numbers" onclick="showNumbers()">
+        <div class="menu-card-icon">1 2 3</div>
+        <div class="menu-card-title">Numbers round</div>
+        <div class="menu-card-desc" id="numbers-desc">Reach the target number using six chosen numbers and arithmetic.</div>
+      </button>
+    </div>
+    <div class="freeplay-row">
+      <div class="freeplay-label">
+        Free Play <span>No timer — take as long as you like</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="freeplay-toggle" onchange="toggleFreePlay()">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Letters round -->
+  <div id="phase-letters" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <button onclick="showMenu()" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;padding:0;line-height:1" title="Back to menu">&larr;</button>
+      <h1>Letters Round <span class="freeplay-badge">Free Play</span></h1>
+    </div>
+    <p class="subtitle">Choose your letters &mdash; at least 3 vowels and 4 consonants.</p>
+
+  <div id="phase-pick">
+    <div class="pick-row">
+      <span class="pick-label">Add a letter</span>
+      <button class="pick-btn" onclick="addLetter('V')">+ Vowel</button>
+      <button class="pick-btn" onclick="addLetter('C')">+ Consonant</button>
+    </div>
+    <div class="pip-row" id="pip-display"></div>
+    <p class="count-label" id="count-label">0 of 9 letters chosen</p>
+    <div class="preview-row" id="pick-preview"></div>
+    <button class="start-btn" id="start-btn" onclick="startGame()" disabled>Start Round</button>
+  </div>
+
+  <div id="phase-game">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div>Vowel</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div>Consonant</div>
+    </div>
+    <div class="tiles-row" id="letter-tiles"></div>
+    <div class="shuffle-wrap">
+      <button class="shuffle-btn" onclick="shuffleTiles()">Shuffle tiles</button>
+    </div>
+    <div class="timer-wrap">
+      <div class="timer-bar-bg"><div class="timer-bar" id="timer-bar"></div></div>
+      <div class="timer-num" id="timer-num">30</div>
+    </div>
+    <div class="word-display" id="word-display"></div>
+    <div class="validation-row" id="validation-row"></div>
+    <p class="keyboard-hint">Type to build your word &middot; Backspace to undo &middot; Enter to submit &middot; Esc to clear</p>
+    <div class="action-row">
+      <button class="act-btn" onclick="clearWord()">Clear</button>
+      <button class="act-btn" onclick="undoLetter()">Undo</button>
+      <button class="act-btn submit" id="submit-btn" onclick="submitWord()">Submit</button>
+    </div>
+    <div class="result-panel" id="result-panel">
+      <p class="result-word" id="result-word"></p>
+      <p class="result-score" id="result-score"></p>
+      <div class="best-word-row" id="best-word-row"></div>
+      <div class="action-row" style="margin-bottom:0">
+        <button class="act-btn" onclick="playAgain()">Play again</button>
+        <button class="act-btn" onclick="showMenu()">Menu</button>
+      </div>
+    </div>
+    <span class="dict-badge">SOWPODS &middot; 155178 words (3&ndash;9 letters)</span>
+  </div>
+  </div> <!-- end phase-letters -->
+
+  <!-- Numbers round -->
+  <div id="phase-numbers">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <button onclick="showMenu()" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;padding:0;line-height:1" title="Back to menu">&larr;</button>
+      <h1>Numbers Round <span class="freeplay-badge">Free Play</span></h1>
+    </div>
+    <p class="subtitle">Choose your numbers, then hit the target using arithmetic.</p>
+
+    <!-- Number selection -->
+    <div id="num-phase-pick">
+      <div class="num-pick-row">
+        <span class="num-pick-label">Large numbers</span>
+        <div class="num-stepper">
+          <button class="num-step-btn" id="large-minus" onclick="adjustLarge(-1)">&#8722;</button>
+          <span class="num-step-val" id="large-val">0</span>
+          <button class="num-step-btn" id="large-plus" onclick="adjustLarge(1)">+</button>
+        </div>
+        <span style="font-size:12px;color:#aaa;margin-left:6px">25, 50, 75, 100</span>
+      </div>
+      <div class="num-pick-row">
+        <span class="num-pick-label">Small numbers</span>
+        <div class="num-stepper">
+          <button class="num-step-btn" id="small-minus" onclick="adjustSmall(-1)">&#8722;</button>
+          <span class="num-step-val" id="small-val">6</span>
+          <button class="num-step-btn" id="small-plus" onclick="adjustSmall(1)">+</button>
+        </div>
+        <span style="font-size:12px;color:#aaa;margin-left:6px">1 &ndash; 10</span>
+      </div>
+      <div class="num-tiles-row" id="num-preview"></div>
+      <button class="start-btn" id="num-start-btn" onclick="startNumbers()">Start Round</button>
+    </div>
+
+    <!-- Game -->
+    <div id="num-phase-game" style="display:none">
+      <div class="target-display">
+        <div class="target-label">Target</div>
+        <div class="target-num" id="num-target">—</div>
+      </div>
+      <div class="timer-wrap">
+        <div class="timer-bar-bg"><div class="timer-bar" id="num-timer-bar"></div></div>
+        <div class="timer-num" id="num-timer-num">30</div>
+      </div>
+      <div class="num-tiles-row" id="num-game-tiles"></div>
+      <div class="num-op-row">
+        <button class="op-btn" id="op-plus"  onclick="selectOp('+')">+</button>
+        <button class="op-btn" id="op-minus" onclick="selectOp('\u2212')">&minus;</button>
+        <button class="op-btn" id="op-times" onclick="selectOp('\u00d7')">&times;</button>
+        <button class="op-btn" id="op-div"   onclick="selectOp('\u00f7')">&divide;</button>
+        <button class="op-btn" id="op-eq"    onclick="commitStep()" style="font-size:16px">=</button>
+      </div>
+      <div id="num-working-wrap" style="display:none">
+        <p class="num-working-label">Working</p>
+        <div class="num-working-row" id="num-working-row"></div>
+      </div>
+      <div class="num-expr-area" id="num-expr-area">
+        <span class="num-expr-placeholder">Select numbers and operators to build your answer</span>
+      </div>
+      <div class="num-running-val" id="num-running-val"></div>
+      <div class="action-row">
+        <button class="act-btn" onclick="numUndo()">Undo</button>
+        <button class="act-btn" onclick="numClear()">Clear</button>
+        <button class="act-btn submit" id="num-submit-btn" onclick="numSubmit()">Submit</button>
+      </div>
+      <div class="result-panel" id="num-result-panel">
+        <p class="result-word" id="num-result-val"></p>
+        <p class="num-result-score" id="num-result-score"></p>
+        <div class="num-solution-row" id="num-solution-row"></div>
+        <div class="action-row" style="margin-bottom:0">
+          <button class="act-btn" onclick="numPlayAgain()">Play again</button>
+          <button class="act-btn" onclick="showMenu()">Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> <!-- end main-card -->
+
+
+<script>
+const VOWEL_WEIGHTS = {A:9,E:12,I:9,O:8,U:4};
+const CONS_WEIGHTS  = {B:2,C:2,D:4,F:2,G:3,H:2,J:1,K:1,L:4,M:2,N:6,P:2,Q:1,R:6,S:4,T:6,V:2,W:2,X:1,Y:2,Z:1};
+
+let wordSet = new Set();
+
+const SOWPODS_URL = "https://github.com/Speed-glitch/Letters-Numbers/raw/refs/heads/main/sowpods.zip";
+
+async function loadWordList() {
+  try {
+    const resp = await fetch(SOWPODS_URL);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const buf = await resp.arrayBuffer();
+    const uint8 = new Uint8Array(buf);
+    // Use fflate to unzip — find the first file entry
+    const unzipped = fflate.unzipSync(uint8);
+    const files = Object.keys(unzipped);
+    if (!files.length) throw new Error("Empty zip");
+    const txtBytes = unzipped[files[0]];
+    const text = new TextDecoder().decode(txtBytes);
+    // Support pipe-delimited or newline-delimited
+    const delim = text.includes("|") ? "|" : "\n";
+    const words = text.split(delim);
+    words.forEach(function(w) {
+      w = w.trim().toUpperCase();
+      if (w.length >= 3 && w.length <= 9) wordSet.add(w);
+    });
+    document.getElementById("loading-overlay").style.display = "none";
+    document.getElementById("main-card").style.visibility = "visible";
+  } catch(e) {
+    var overlay = document.getElementById("loading-overlay");
+    overlay.innerHTML = "<p class=\"loading-error\">Could not load word list.<br>Please check your internet connection and reload.<br><br><small>" + e.message + "</small></p>";
+  }
+}
+
+loadWordList();
+
+let chosen = [], gameLetters = [], usedIndices = [], wordIndices = [];
+let timer = null, timeLeft = 30, gameOver = false;
+let autoStartTimer = null, autoStartCountdown = 0;
+
+var freePlay = false;
+
+function toggleFreePlay() {
+  freePlay = document.getElementById("freeplay-toggle").checked;
+  document.body.classList.toggle("freeplay", freePlay);
+}
+
+function weightedPick(w) {
+  const keys = Object.keys(w), total = keys.reduce((s,k) => s + w[k], 0);
+  let r = Math.random() * total;
+  for (const k of keys) { r -= w[k]; if (r <= 0) return k; }
+  return keys[keys.length - 1];
+}
+
+function addLetter(type) {
+  if (chosen.length >= 9) return;
+  const v = chosen.filter(x => x.type === "V").length;
+  const c = chosen.filter(x => x.type === "C").length;
+  const rem = 9 - chosen.length;
+  if (type === "V" && rem - 1 < 4 - c) { alert("Not enough room for the required consonants!"); return; }
+  if (type === "C" && rem - 1 < 3 - v) { alert("Not enough room for the required vowels!"); return; }
+  chosen.push({ type, letter: type === "V" ? weightedPick(VOWEL_WEIGHTS) : weightedPick(CONS_WEIGHTS) });
+  updatePickUI();
+}
+
+function updatePickUI() {
+  const v = chosen.filter(x => x.type === "V").length;
+  const c = chosen.filter(x => x.type === "C").length;
+  const n = chosen.length;
+  document.getElementById("pip-display").innerHTML =
+    chosen.map(x => "<div class=\"pip " + (x.type === "V" ? "v" : "c") + "\"></div>").join("") +
+    Array(9 - n).fill("<div class=\"pip\"></div>").join("");
+  document.getElementById("count-label").textContent = n < 9
+    ? (n + " of 9 \u2014 " + v + " vowel" + (v !== 1 ? "s" : "") + ", " + c + " consonant" + (c !== 1 ? "s" : ""))
+    : ("Ready \u2014 " + v + " vowels, " + c + " consonants");
+  document.getElementById("pick-preview").innerHTML =
+    chosen.map(x => "<div class=\"tile " + (x.type === "V" ? "vowel" : "consonant") + "\" style=\"cursor:default\">" + x.letter + "</div>").join("");
+  const ready = n === 9 && v >= 3 && c >= 4;
+  document.getElementById("start-btn").disabled = !ready;
+  if (ready && !autoStartTimer) {
+    startAutoCountdown();
+  }
+}
+
+function startAutoCountdown() {
+  if (freePlay) return;
+  autoStartCountdown = 3;
+  updateStartBtn();
+  autoStartTimer = setInterval(function() {
+    autoStartCountdown--;
+    if (autoStartCountdown <= 0) {
+      clearInterval(autoStartTimer);
+      autoStartTimer = null;
+      startGame();
+    } else {
+      updateStartBtn();
+    }
+  }, 1000);
+}
+
+function updateStartBtn() {
+  var btn = document.getElementById("start-btn");
+  btn.textContent = autoStartCountdown > 0
+    ? ("Starting in " + autoStartCountdown + "\u2026")
+    : "Start Round";
+}
+
+function startGame() {
+  if (autoStartTimer) { clearInterval(autoStartTimer); autoStartTimer = null; }
+  gameLetters = chosen.map(x => Object.assign({}, x));
+  usedIndices = []; wordIndices = []; gameOver = false;
+  document.getElementById("phase-pick").style.display = "none";
+  document.getElementById("phase-game").style.display = "block";
+  document.getElementById("result-panel").style.display = "none";
+  renderTiles(); renderWord(); updateValidation(); startTimer();
+}
+
+function renderTiles() {
+  document.getElementById("letter-tiles").innerHTML = gameLetters.map(function(x, i) {
+    return "<div class=\"tile " + (x.type === "V" ? "vowel" : "consonant") + (usedIndices.includes(i) ? " used" : "") + "\" onclick=\"pickTile(" + i + ")\">" + x.letter + "</div>";
+  }).join("");
+}
+
+function renderWord() {
+  const d = document.getElementById("word-display");
+  if (!wordIndices.length) {
+    d.className = "word-display";
+    d.innerHTML = "<span class=\"word-placeholder\">Tap tiles or type to build your word</span>";
+    return;
+  }
+  d.innerHTML = wordIndices.map(function(idx, pos) {
+    return "<div class=\"word-tile\" onclick=\"removeFromWord(" + pos + ")\">" + gameLetters[idx].letter + "</div>";
+  }).join("");
+}
+
+function currentWord() { return wordIndices.map(function(i) { return gameLetters[i].letter; }).join(""); }
+
+function updateValidation() {
+  const word = currentWord();
+  const row = document.getElementById("validation-row");
+  const wd  = document.getElementById("word-display");
+  const sb  = document.getElementById("submit-btn");
+  row.className = "validation-row"; row.innerHTML = "";
+  if (!wordIndices.length || word.length < 3) { wd.className = "word-display"; sb.disabled = false; return; }
+  const valid = wordSet.has(word);
+  if (valid) {
+    row.className = "validation-row val-valid";
+    row.innerHTML = "<div class=\"val-dot\"></div><span class=\"val-text\">" + word + " is a valid word</span>";
+    wd.className = "word-display valid"; sb.disabled = false;
+  } else {
+    row.className = "validation-row val-invalid";
+    row.innerHTML = "<div class=\"val-dot\"></div><span class=\"val-text\">" + word + " is not in the word list</span>";
+    wd.className = "word-display invalid"; sb.disabled = true;
+  }
+}
+
+function pickTile(i) {
+  if (gameOver || usedIndices.includes(i)) return;
+  usedIndices.push(i); wordIndices.push(i);
+  renderTiles(); renderWord(); updateValidation();
+}
+
+function removeFromWord(pos) {
+  if (gameOver) return;
+  usedIndices = usedIndices.filter(function(x) { return x !== wordIndices[pos]; });
+  wordIndices.splice(pos, 1);
+  renderTiles(); renderWord(); updateValidation();
+}
+
+function undoLetter() {
+  if (!wordIndices.length) return;
+  const ti = wordIndices.pop();
+  usedIndices = usedIndices.filter(function(x) { return x !== ti; });
+  renderTiles(); renderWord(); updateValidation();
+}
+
+function clearWord() {
+  usedIndices = []; wordIndices = [];
+  renderTiles(); renderWord(); updateValidation();
+}
+
+function shuffleTiles() {
+  for (let i = gameLetters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = gameLetters[i]; gameLetters[i] = gameLetters[j]; gameLetters[j] = tmp;
+  }
+  usedIndices = []; wordIndices = [];
+  renderTiles(); renderWord(); updateValidation();
+}
+
+function startTimer() {
+  if (freePlay) { timeLeft = Infinity; return; }
+  timeLeft = 30; updateTimerUI();
+  timer = setInterval(function() {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) { clearInterval(timer); endGame(true); }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  document.getElementById("timer-num").textContent = timeLeft;
+  const bar = document.getElementById("timer-bar");
+  bar.style.width = (timeLeft / 30 * 100) + "%";
+  bar.style.background = timeLeft > 15 ? "#1D9E75" : timeLeft > 8 ? "#EF9F27" : "#E24B4A";
+}
+
+function submitWord() {
+  if (gameOver) return;
+  const word = currentWord();
+  if (word.length >= 3 && !wordSet.has(word)) {
+    document.getElementById("validation-row").innerHTML =
+      "<div class=\"val-dot\" style=\"background:#E24B4A\"></div><span style=\"color:#A32D2D;font-size:12px\">That word is not valid — keep trying!</span>";
+    return;
+  }
+  clearInterval(timer);
+  endGame(false);
+}
+
+function findBestWords(letters) {
+  let bestLen = 0, results = [];
+  wordSet.forEach(function(w) {
+    if (w.length < bestLen) return;
+    const avail = letters.slice();
+    let ok = true;
+    for (let i = 0; i < w.length; i++) {
+      const idx = avail.indexOf(w[i]);
+      if (idx === -1) { ok = false; break; }
+      avail.splice(idx, 1);
+    }
+    if (!ok) return;
+    if (w.length > bestLen) { bestLen = w.length; results = [w]; }
+    else if (w.length === bestLen) { results.push(w); }
+  });
+  return results;
+}
+
+function endGame(ranOut) {
+  gameOver = true;
+  const word = currentWord();
+  const len = word.length, isFullMonty = len === 9, score = isFullMonty ? 18 : len;
+  document.getElementById("validation-row").innerHTML = "";
+  document.getElementById("word-display").className = "word-display";
+  const panel = document.getElementById("result-panel");
+  panel.style.display = "block";
+  document.getElementById("result-word").textContent = word || "\u2014";
+  const scoreEl = document.getElementById("result-score");
+  if (!word) {
+    scoreEl.textContent = ranOut ? "Time's up \u2014 no word submitted. 0 points." : "No word entered. 0 points.";
+  } else if (isFullMonty) {
+    scoreEl.innerHTML = "<span class=\"full-monty\">Full Monty!</span> 9 letters \u00d7 2 = <strong>18 points</strong>";
+  } else {
+    scoreEl.textContent = (ranOut ? "Time's up! " : "") + len + " letter" + (len !== 1 ? "s" : "") + " = " + score + " point" + (score !== 1 ? "s" : "");
+  }
+  const bestEl = document.getElementById("best-word-row");
+  bestEl.textContent = "Finding best word\u2026";
+  setTimeout(function() {
+    const bests = findBestWords(gameLetters.map(function(x) { return x.letter; }));
+    if (!bests.length) {
+      bestEl.textContent = "No word found in dictionary for these letters.";
+      return;
+    }
+    const bLen = bests[0].length;
+    const bScore = bLen === 9 ? 18 : bLen;
+    const isFM = bLen === 9;
+    const playerGotIt = bests.includes(word);
+    const label = bests.length === 1 ? "Best possible" : "Best possible (" + bests.length + " words)";
+    const wordSpans = bests.map(function(w) {
+      return "<span class=\"best-word-val" + (isFM ? " best-fm" : "") + "\">" + w + "</span>";
+    }).join("<span style=\"color:#aaa\"> / </span>");
+    bestEl.innerHTML =
+      label + ": " + wordSpans + " \u2014 " +
+      (isFM ? "<span class=\"best-fm\">Full Monty! </span>" : "") +
+      bScore + " point" + (bScore !== 1 ? "s" : "") +
+      (playerGotIt ? " <span style=\"color:#1D9E75;font-size:12px\">\u2014 you got one!</span>" : "");
+  }, 50);
+}
+
+function showMenu() {
+  clearInterval(timer);
+  clearInterval(numTimer);
+  if (autoStartTimer) { clearInterval(autoStartTimer); autoStartTimer = null; }
+  document.getElementById("phase-menu").style.display = "block";
+  document.getElementById("phase-letters").style.display = "none";
+  document.getElementById("phase-numbers").style.display = "none";
+}
+
+function showLetters() {
+  document.getElementById("phase-menu").style.display = "none";
+  document.getElementById("phase-letters").style.display = "block";
+  chosen = []; gameLetters = []; usedIndices = []; wordIndices = []; gameOver = false;
+  autoStartCountdown = 0;
+  document.getElementById("start-btn").textContent = "Start Round";
+  document.getElementById("phase-pick").style.display = "block";
+  document.getElementById("phase-game").style.display = "none";
+  updatePickUI();
+}
+
+function playAgain() {
+  chosen = []; gameLetters = []; usedIndices = []; wordIndices = []; gameOver = false;
+  clearInterval(timer);
+  if (autoStartTimer) { clearInterval(autoStartTimer); autoStartTimer = null; }
+  autoStartCountdown = 0;
+  var btn = document.getElementById("start-btn");
+  btn.textContent = "Start Round";
+  document.getElementById("phase-pick").style.display = "block";
+  document.getElementById("phase-game").style.display = "none";
+  updatePickUI();
+}
+
+document.addEventListener("keydown", function(e) {
+  if (document.getElementById("phase-game").style.display === "none" || gameOver) return;
+  const key = e.key.toUpperCase();
+  if (key === "BACKSPACE") { e.preventDefault(); undoLetter(); }
+  else if (key === "ENTER") { e.preventDefault(); submitWord(); }
+  else if (key === "ESCAPE") { clearWord(); }
+  else if (/^[A-Z]$/.test(key)) {
+    let found = -1;
+    for (let i = 0; i < gameLetters.length; i++) {
+      if (gameLetters[i].letter === key && !usedIndices.includes(i)) { found = i; break; }
+    }
+    if (found !== -1) pickTile(found);
+  }
+});
+
+
+// ============================================================
+// NUMBERS ROUND
+// ============================================================
+
+function showNumbers() {
+  document.getElementById("phase-menu").style.display = "none";
+  document.getElementById("phase-numbers").style.display = "block";
+  numResetPick();
+}
+
+var nLarge = 0, nSmall = 6;
+var numTiles = [], numTarget = 0;
+var numTimer = null, numTimeLeft = 30, numGameOver = false;
+var numTokens = [];
+var numUsedTileIndices = [];
+var LARGE_POOL = [25, 50, 75, 100];
+
+// Step-based working system
+// Each step: { tileIndices: [...], resultValue: number, resultTileId: string }
+// resultTiles: array of { id, value, usedInStep } — selectable like original tiles
+var numSteps = [];       // committed steps (each = press)
+var numResultTiles = []; // result tiles currently available
+var numUsedResultIds = [];// result tile ids used in current expression
+
+function numResetPick() {
+  nLarge = 0; nSmall = 6;
+  numSteps = []; numResultTiles = []; numUsedResultIds = [];
+  document.getElementById("num-phase-pick").style.display = "block";
+  document.getElementById("num-phase-game").style.display = "none";
+  document.getElementById("num-result-panel").style.display = "none";
+  updateNumPickUI();
+}
+
+function adjustLarge(d) {
+  var next = nLarge + d;
+  if (next < 0 || next > 4) return;
+  nLarge = next; nSmall = 6 - nLarge;
+  updateNumPickUI();
+}
+
+function adjustSmall(d) {
+  // small is always 6 - nLarge, controlled via large
+  adjustLarge(-d);
+}
+
+function updateNumPickUI() {
+  document.getElementById("large-val").textContent = nLarge;
+  document.getElementById("small-val").textContent = nSmall;
+  document.getElementById("large-minus").disabled = nLarge <= 0;
+  document.getElementById("large-plus").disabled = nLarge >= 4;
+  document.getElementById("small-minus").disabled = nSmall <= 0;
+  document.getElementById("small-plus").disabled = nSmall >= 6;
+  var preview = [];
+  for (var i=0;i<nLarge;i++){preview.push({type:'large'});}
+  for (var i=0;i<nSmall;i++){preview.push({type:'small'});}
+  document.getElementById("num-preview").innerHTML = preview.map(function(t){
+    return '<div class="num-tile '+t.type+'" style="cursor:default"></div>';
+  }).join("");
+}
+
+function generateNumTiles() {
+  var tiles = [];
+  var pool = LARGE_POOL.slice().sort(function(){return Math.random()-0.5;}).slice(0,nLarge);
+  pool.sort(function(a,b){return b-a;});
+  pool.forEach(function(v){tiles.push({value:v,type:'large'});});
+  for (var i=0;i<nSmall;i++){tiles.push({value:Math.floor(Math.random()*10)+1,type:'small'});}
+  return tiles;
+}
+
+function startNumbers() {
+  numTiles = generateNumTiles();
+  numTarget = Math.floor(Math.random()*899)+101;
+  numTokens = []; numUsedTileIndices = []; numGameOver = false;
+  numSteps = []; numResultTiles = []; numUsedResultIds = [];
+  document.getElementById("num-phase-pick").style.display = "none";
+  document.getElementById("num-phase-game").style.display = "block";
+  document.getElementById("num-result-panel").style.display = "none";
+  document.getElementById("num-working-wrap").style.display = "none";
+  document.getElementById("num-target").textContent = numTarget;
+  renderNumTiles(); renderNumExpr(); startNumTimer();
+}
+
+function renderNumTiles() {
+  document.getElementById("num-game-tiles").innerHTML = numTiles.map(function(t,i){
+    var used = numUsedTileIndices.includes(i);
+    return '<div class="num-tile '+t.type+(used?' used':'')+'" onclick="numPickTile('+i+')">'+t.value+'</div>';
+  }).join("");
+  // Working row
+  var wrap = document.getElementById("num-working-wrap");
+  if (!numResultTiles.length) { wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  document.getElementById("num-working-row").innerHTML = numResultTiles.map(function(rt){
+    var used = numUsedResultIds.includes(rt.id) || rt.usedInStep;
+    return '<div class="num-tile result'+(used?' used':'')+'" onclick="numPickResult(\''+rt.id+'\')">'+rt.value+'</div>';
+  }).join("");
+}
+
+function numPickTile(i) {
+  if (numGameOver || numUsedTileIndices.includes(i)) return;
+  var last = numTokens[numTokens.length-1];
+  if (numTokens.length > 0 && last && last.type !== 'op') return;
+  numTokens.push({type:'num', value:numTiles[i].value, tileIdx:i, source:'original'});
+  numUsedTileIndices.push(i);
+  renderNumTiles(); renderNumExpr();
+}
+
+function numPickResult(id) {
+  if (numGameOver) return;
+  var rt = numResultTiles.find(function(r){return r.id===id;});
+  if (!rt || rt.usedInStep || numUsedResultIds.includes(id)) return;
+  var last = numTokens[numTokens.length-1];
+  if (numTokens.length > 0 && last && last.type !== 'op') return;
+  numTokens.push({type:'num', value:rt.value, resultId:id, source:'result'});
+  numUsedResultIds.push(id);
+  renderNumTiles(); renderNumExpr();
+}
+
+function selectOp(op) {
+  if (numGameOver) return;
+  var last = numTokens[numTokens.length-1];
+  if (!last || last.type !== 'num') return;
+  numTokens.push({type:'op', value:op});
+  renderNumExpr();
+}
+
+function numUndo() {
+  if (!numTokens.length) {
+    // No current expression — undo last committed step
+    if (!numSteps.length) return;
+    var step = numSteps.pop();
+    // Remove the result tile this step created
+    numResultTiles = numResultTiles.filter(function(r){return r.id !== step.resultTileId;});
+    // Restore the original tile indices locked by this step
+    step.tileIndices.forEach(function(i){ numUsedTileIndices = numUsedTileIndices.filter(function(x){return x!==i;}); });
+    // Restore the result tile ids locked by this step
+    step.resultIds.forEach(function(id){ numUsedResultIds = numUsedResultIds.filter(function(x){return x!==id;}); if(numResultTiles.find(function(r){return r.id===id;})) { var rt=numResultTiles.find(function(r){return r.id===id;}); rt.usedInStep=false; } });
+    renderNumTiles(); renderNumExpr();
+    return;
+  }
+  var tok = numTokens.pop();
+  if (tok.source === 'original') {
+    numUsedTileIndices = numUsedTileIndices.filter(function(x){return x!==tok.tileIdx;});
+    renderNumTiles();
+  } else if (tok.source === 'result') {
+    numUsedResultIds = numUsedResultIds.filter(function(x){return x!==tok.resultId;});
+    renderNumTiles();
+  }
+  renderNumExpr();
+}
+
+function numClear() {
+  // Release tiles/results used in current expression only
+  numTokens.forEach(function(tok){
+    if (tok.source==='original') numUsedTileIndices = numUsedTileIndices.filter(function(x){return x!==tok.tileIdx;});
+    if (tok.source==='result') numUsedResultIds = numUsedResultIds.filter(function(x){return x!==tok.resultId;});
+  });
+  numTokens = [];
+  renderNumTiles(); renderNumExpr();
+}
+
+function numRemoveToken(idx) {
+  if (numGameOver) return;
+  // Release all tokens from idx onwards
+  for (var i = idx; i < numTokens.length; i++) {
+    var tok = numTokens[i];
+    if (tok.source === 'original') numUsedTileIndices = numUsedTileIndices.filter(function(x){return x!==tok.tileIdx;});
+    if (tok.source === 'result') numUsedResultIds = numUsedResultIds.filter(function(x){return x!==tok.resultId;});
+  }
+  numTokens = numTokens.slice(0, idx);
+  renderNumTiles(); renderNumExpr();
+}
+
+function commitStep() {
+  if (numGameOver) return;
+  if (!numTokens.length) return;
+  if (numTokens[numTokens.length-1].type === 'op') return;
+  var val = evalTokens(numTokens);
+  if (val === null || val <= 0) return;
+  // Lock the tiles used in this step
+  var tileIndicesUsed = numTokens.filter(function(t){return t.source==='original';}).map(function(t){return t.tileIdx;});
+  var resultIdsUsed  = numTokens.filter(function(t){return t.source==='result';}).map(function(t){return t.resultId;});
+  // Mark result tiles as consumed
+  resultIdsUsed.forEach(function(id){
+    var rt = numResultTiles.find(function(r){return r.id===id;});
+    if (rt) rt.usedInStep = true;
+  });
+  // Create new result tile
+  var newId = 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  numResultTiles.push({id: newId, value: val, usedInStep: false});
+  // Record step for undo
+  numSteps.push({
+    tileIndices: tileIndicesUsed,
+    resultIds: resultIdsUsed,
+    resultTileId: newId
+  });
+  // Clear current expression (tiles stay locked via numUsedTileIndices / usedInStep)
+  numUsedResultIds = numUsedResultIds.filter(function(id){ return !resultIdsUsed.includes(id); });
+  numTokens = [];
+  renderNumTiles(); renderNumExpr();
+}
+
+function evalTokens(tokens) {
+  if (!tokens.length) return null;
+  if (tokens[tokens.length-1].type === 'op') return null;
+  // Two-pass: handle * and / first, then + and -
+  var nums = [], ops = [];
+  for (var i = 0; i < tokens.length; i++) {
+    if (tokens[i].type === 'num') nums.push(tokens[i].value);
+    else {
+      var v = tokens[i].value;
+      if (v === '−') v = '-';
+      if (v === '×') v = '*';
+      if (v === '÷') v = '/';
+      ops.push(v);
+    }
+  }
+  if (nums.length !== ops.length + 1) return null;
+  // pass 1: * /
+  var n2 = nums.slice(), o2 = ops.slice();
+  for (var i = 0; i < o2.length; ) {
+    if (o2[i] === '*') {
+      var res = n2[i] * n2[i+1];
+      if (!Number.isInteger(res)) return null;
+      n2.splice(i, 2, res); o2.splice(i, 1);
+    } else if (o2[i] === '/') {
+      if (n2[i+1] === 0 || n2[i] % n2[i+1] !== 0) return null;
+      n2.splice(i, 2, n2[i]/n2[i+1]); o2.splice(i, 1);
+    } else { i++; }
+  }
+  // pass 2: + -
+  var result = n2[0];
+  for (var i = 0; i < o2.length; i++) {
+    if (o2[i] === '+') result += n2[i+1];
+    else if (o2[i] === '-') result -= n2[i+1];
+  }
+  return Number.isInteger(result) ? result : null;
+}
+
+function renderNumExpr() {
+  var area = document.getElementById("num-expr-area");
+  var runEl = document.getElementById("num-running-val");
+  if (!numTokens.length) {
+    area.className = "num-expr-area";
+    area.innerHTML = '<span class="num-expr-placeholder">Select numbers and operators to build your answer</span>';
+    runEl.className = "num-running-val"; runEl.textContent = ""; return;
+  }
+  area.innerHTML = numTokens.map(function(t,i){
+    var cls = t.type==='op' ? 'num-expr-token op-token' : 'num-expr-token';
+    return '<span class="'+cls+'" onclick="numRemoveToken('+i+')">'+t.value+'</span>';
+  }).join("");
+  // Only eval if last token is a number
+  if (numTokens[numTokens.length-1].type === 'op') {
+    area.className = "num-expr-area";
+    runEl.className = "num-running-val"; runEl.textContent = ""; return;
+  }
+  var val = evalTokens(numTokens);
+  if (val === null) {
+    area.className = "num-expr-area";
+    runEl.className = "num-running-val error"; runEl.textContent = "Invalid (fractions not allowed)";
+  } else if (val === numTarget) {
+    area.className = "num-expr-area exact";
+    runEl.className = "num-running-val exact"; runEl.textContent = "= "+val+" — exact!";
+  } else {
+    area.className = "num-expr-area";
+    runEl.className = "num-running-val"; runEl.textContent = "= "+val+" (off by "+Math.abs(val-numTarget)+")";
+  }
+}
+
+function startNumTimer() {
+  if (freePlay) { numTimeLeft = Infinity; return; }
+  numTimeLeft = 30; updateNumTimerUI();
+  numTimer = setInterval(function(){
+    numTimeLeft--;
+    updateNumTimerUI();
+    if (numTimeLeft<=0){clearInterval(numTimer);numEndGame(true);}
+  },1000);
+}
+
+function updateNumTimerUI() {
+  document.getElementById("num-timer-num").textContent = numTimeLeft;
+  var bar = document.getElementById("num-timer-bar");
+  bar.style.width = (numTimeLeft/30*100)+"%";
+  bar.style.background = numTimeLeft>15?"#1D9E75":numTimeLeft>8?"#EF9F27":"#E24B4A";
+}
+
+function numSubmit() {
+  if (numGameOver) return;
+  var val = null;
+  if (numTokens.length && numTokens[numTokens.length-1].type !== 'op') {
+    val = evalTokens(numTokens);
+  }
+  // If nothing in expression, check if a single result tile is the answer
+  if (val === null) {
+    var avail = numResultTiles.filter(function(rt){ return !rt.usedInStep && !numUsedResultIds.includes(rt.id); });
+    if (avail.length === 1) val = avail[0].value;
+    else if (avail.length > 1) {
+      // Pick closest
+      avail.forEach(function(rt){ if (val===null || Math.abs(rt.value-numTarget)<Math.abs(val-numTarget)) val=rt.value; });
+    }
+  }
+  if (val === null) return;
+  clearInterval(numTimer);
+  numEndGame(false, val);
+}
+
+// Solver: recursive search over all subsets and operation combinations
+function numSolve(nums, target) {
+  var best = {diff: Infinity, value: null, steps: []};
+
+  function search(available, steps) {
+    for (var i = 0; i < available.length; i++) {
+      var diff = Math.abs(available[i].value - target);
+      if (diff < best.diff) {
+        best = {diff: diff, value: available[i].value, steps: steps.slice()};
+        if (best.diff === 0) return;
+      }
+    }
+    if (best.diff === 0) return;
+    for (var i = 0; i < available.length && best.diff > 0; i++) {
+      for (var j = 0; j < available.length && best.diff > 0; j++) {
+        if (i === j) continue;
+        var a = available[i].value, b = available[j].value;
+        var rest = available.filter(function(_,k){return k!==i&&k!==j;});
+        var candidates = [
+          {val:a+b, str:a+" + "+b+" = "+(a+b)},
+          {val:a-b, str:a+" − "+b+" = "+(a-b)},
+          {val:a*b, str:a+" × "+b+" = "+(a*b)},
+        ];
+        if (b!==0 && a%b===0) candidates.push({val:a/b, str:a+" ÷ "+b+" = "+(a/b)});
+        for (var k = 0; k < candidates.length && best.diff > 0; k++) {
+          if (candidates[k].val <= 0 || !Number.isInteger(candidates[k].val)) continue;
+          steps.push(candidates[k].str);
+          search(rest.concat([{value:candidates[k].val}]), steps);
+          steps.pop();
+        }
+      }
+    }
+  }
+
+  search(nums.map(function(v){return {value:v};}), []);
+  return best;
+}
+
+function numEndGame(ranOut, submittedVal) {
+  numGameOver = true;
+  // Determine submitted value: explicit submit, or best current expression, or best result tile
+  var val = (submittedVal !== undefined) ? submittedVal : null;
+  if (val === null && numTokens.length && numTokens[numTokens.length-1].type !== 'op') {
+    val = evalTokens(numTokens);
+  }
+  // Also check if any result tile exactly or closely matches (player may have hit = and not submitted)
+  numResultTiles.forEach(function(rt){
+    if (!rt.usedInStep) {
+      if (val === null || Math.abs(rt.value - numTarget) < Math.abs(val - numTarget)) {
+        val = rt.value;
+      }
+    }
+  });
+  var diff = (val !== null && val !== undefined) ? Math.abs(val - numTarget) : null;
+  document.getElementById("num-result-panel").style.display = "block";
+  var valEl = document.getElementById("num-result-val");
+  var scoreEl = document.getElementById("num-result-score");
+  if (val === null || val === undefined) {
+    valEl.textContent = "—";
+    scoreEl.textContent = ranOut ? "Time's up — no answer submitted. 0 points." : "0 points.";
+  } else if (diff === 0) {
+    valEl.innerHTML = '<span class="num-result-exact">'+val+'</span>';
+    scoreEl.innerHTML = (ranOut?"Time's up! ":"")+"Exact! <strong>10 points</strong>";
+  } else if (diff <= 5) {
+    valEl.textContent = val;
+    scoreEl.textContent = (ranOut?"Time's up! ":"")+"Off by "+diff+" — 7 points";
+  } else if (diff <= 10) {
+    valEl.textContent = val;
+    scoreEl.textContent = (ranOut?"Time's up! ":"")+"Off by "+diff+" — 5 points";
+  } else {
+    valEl.textContent = val;
+    scoreEl.textContent = (ranOut?"Time's up! ":"")+"Off by "+diff+" — 0 points";
+  }
+  var solEl = document.getElementById("num-solution-row");
+  solEl.textContent = "Finding best solution…";
+  setTimeout(function(){
+    var nums = numTiles.map(function(t){return t.value;});
+    var result = numSolve(nums, numTarget);
+    if (!result.steps.length && result.value === null) {
+      solEl.textContent = "No solution found."; return;
+    }
+    var header = result.diff===0 ? "Best solution:" : "Closest possible: "+result.value+" (off by "+result.diff+")";
+    solEl.innerHTML = header + (result.steps.length ? "<br>"+result.steps.map(function(s){
+      return '<span class="num-solution-val">'+s+'</span>';
+    }).join("<br>") : "");
+  }, 50);
+}
+
+function numPlayAgain() {
+  clearInterval(numTimer);
+  numResetPick();
+}
+
+updatePickUI();
+</script>
+</body>
+</html>
